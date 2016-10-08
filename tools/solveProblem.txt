@@ -1,0 +1,7 @@
+解决Screenshot: available via screen问题及部分图片无法显示的问题：
+
+1、在driver.get()方法之后将本页面保留成图片:
+    driver.save_screenshot('screenshot.png')
+2、然后读取图片:
+    driver.get_screenshot_as_file('screenshot.png')
+3、进行元素选取等操作～
