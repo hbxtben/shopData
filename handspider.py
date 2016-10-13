@@ -11,7 +11,8 @@ class ShopData:
         self.HisTool = PageData()
         self.HisTool.makeCompile()
         self.pageTool = PageData()
-        self.dbegine = DB()
+        self.dbengine = DB()
+        print u"浏览器准备已完成～"
 
     def getPageData(self,clsIter,dataBrand,shopName,xpathList,shopID):
         datalist=[]
@@ -19,13 +20,13 @@ class ShopData:
             wait(self.pageTool.driver, 2).until(
                 lambda theDriver: theDriver.find_element_by_xpath(xpathList[3]).is_displayed())
         except Exception,e:
-            if shopID == 4:
+            if shopID == 3:
                 try:
                     wait(self.pageTool.driver, 2).until(lambda theDriver: theDriver.find_element_by_xpath(xpathList[9]).is_displayed())
                 except:
                     return
             else:
-                print e
+                print e,"not find the goods"
                 return
 
         #get all the  node from the page
@@ -36,7 +37,7 @@ class ShopData:
         optionState=0
         if len(optionsName)==0 and shopID==1:
             optionsName=self.pageTool.driver.find_elements_by_xpath(xpathList[9])
-        elif len(optionsName)==0 and shopID==4:
+        elif len(optionsName)==0 and shopID==3:
             optionsName = self.pageTool.driver.find_elements_by_xpath(xpathList[10])
             optionsHot = self.pageTool.driver.find_elements_by_xpath(xpathList[11])  # text
             optionsFee = self.pageTool.driver.find_elements_by_xpath(xpathList[12])  # float(text)
@@ -63,7 +64,7 @@ class ShopData:
             #解决西帖网url规则问题
             try:
                 hisUrl = optionsUrl[item].get_attribute("href")
-                if shopID==3:
+                if shopID==2:
                     hispat=self.HisTool.patterns['suning'].search(hisUrl)
                     hisUrl=hispat.group(1)+hispat.group(2)
             except AttributeError:
@@ -72,7 +73,7 @@ class ShopData:
             hisData = self.HisTool.getHisData(hisUrl)
             data.append(hisData)
 
-            if shopID==4:
+            if shopID==3:
                 page=optionsPage[item].get_attribute('data-src')
             else:
                 page=optionsPage[item].get_attribute('src')
@@ -80,64 +81,72 @@ class ShopData:
             data.append(optionsHot[item].text)
             data.append(shopName)
             data.append(date.today())
-
             datalist.append(data)
+
             print("--------%d>%d   %s" % (item, rangeNum, optionsName[item].text))
-        self.dbegine.inserts(datalist)
+        self.dbengine.inserts(datalist)
 
 
     #输入网站url，所有类别序列，电商名，xpath序列，电商序列标号
-    def getClsData(self,weburl,clsAll,shopName,xpathList,shopID):
-        for clsIter in clsAll:
-            self.pageTool.driver.get(weburl)
-            self.pageTool.driver.find_element_by_xpath(xpathList[0]).send_keys(clsIter)
-            if shopID==0:
-                self.pageTool.driver.find_element_by_xpath(xpathList[9]).click()
-            else:
-                self.pageTool.driver.find_element_by_xpath(xpathList[0]).send_keys(Keys.RETURN)
+    def getClsData(self,weburl,clsIter,shopName,xpathList,shopID):
+        self.pageTool.driver.get(weburl)
+        self.pageTool.driver.find_element_by_xpath(xpathList[0]).send_keys(clsIter)
+        if shopID==0:
+            self.pageTool.driver.find_element_by_xpath(xpathList[9]).click()
+        else:
+            self.pageTool.driver.find_element_by_xpath(xpathList[0]).send_keys(Keys.RETURN)
 
+        try:
+            wait(self.pageTool.driver, 2).until(lambda theDriver: theDriver.find_element_by_xpath(
+                xpathList[1]).is_displayed())
+        except Exception:
+            print shopName+"@"+clsIter+u" ERROR:找不到该类"
+            return
+        optionsBrand = self.pageTool.driver.find_elements_by_xpath(xpathList[2])
+        optionsBrandNum = len(optionsBrand)
+        optionsBrandNum = optionsBrandNum if optionsBrandNum<20 else 20
+
+        print shopName+"@"+clsIter + u" has brand num:"+str(optionsBrandNum)
+
+        #only god and me can know this code
+        #now only god
+
+        #从品牌列表中进入
+        for brandIter in range(optionsBrandNum):
             try:
-                wait(self.pageTool.driver, 2).until(lambda theDriver: theDriver.find_element_by_xpath(
+                wait(self.pageTool.driver, 1).until(lambda theDriver: theDriver.find_element_by_xpath(
                     xpathList[1]).is_displayed())
-            except Exception:
-                print clsIter+u" -ERROR:找不到该类"
-                continue
-            optionsBrand = self.pageTool.driver.find_elements_by_xpath(xpathList[2])
-            optionsBrandNum = len(optionsBrand)
-            optionsBrandNum = optionsBrandNum if optionsBrandNum<20 else 20
 
-            print shopName+"@"+clsIter + u" has brand num:"
-            print optionsBrandNum
+                #保存品牌页面
+                if brandIter==0:
+                    self.pageTool.driver.save_screenshot('brandPage.png')
+                self.pageTool.driver.get_screenshot_as_file('brandPage.png')
 
-            #only god and me can know this code
-            #now only god
+                optionsBrand = self.pageTool.driver.find_elements_by_xpath(xpathList[2])
+                dataBrand = optionsBrand[brandIter].text
 
-            #从品牌列表中进入
-            for brandIter in range(optionsBrandNum):
-                try:
-                    wait(self.pageTool.driver, 1).until(lambda theDriver: theDriver.find_element_by_xpath(
-                        xpathList[1]).is_displayed())
-
-                    #点击品牌
-                    if brandIter==0:
-                        self.pageTool.driver.save_screenshot('brandPage.png')
-                    self.pageTool.driver.get_screenshot_as_file('brandPage.png')
-
-                    optionsBrand = self.pageTool.driver.find_elements_by_xpath(xpathList[2])
-                    dataBrand = optionsBrand[brandIter].text
-                    optionsBrand[brandIter].click()
-
-                    #解决Screenshot: available via screen问题
-                    self.pageTool.driver.save_screenshot('shopPage.png')
-                    self.pageTool.driver.get_screenshot_as_file('shopPage.png')
-
-                    print(shopName+"@"+clsIter+"@"+dataBrand + "@" + u"》》》 %d/%d" % (brandIter, optionsBrandNum))
-                except Exception, e:
-                    print "品牌找不到"
-                    print(e)
+                #检查数据库
+                checksql = 'select * from shop_things where goodsFrom="' + shopName + '" and goodsCls="' + clsIter + '" and goodsBrand="' + \
+                           dataBrand + '"'
+                sqllong = self.dbengine.cursor.execute(checksql)
+                if sqllong != 0:
+                    print shopName + "@" + optionsBrand[brandIter].text + u" 已经存入数据库"
                     continue
-                self.getPageData(clsIter, dataBrand, shopName, xpathList, shopID)
+
+                optionsBrand[brandIter].click()
+
+                #解决Screenshot: available via screen问题
+                self.pageTool.driver.save_screenshot('shopPage.png')
+                self.pageTool.driver.get_screenshot_as_file('shopPage.png')
+
+                print(shopName+"@"+clsIter+"@"+dataBrand + "@" + u"》》》 %d/%d" % (brandIter, optionsBrandNum))
+            except Exception, e:
+                print shopName+"@"+dataBrand+u"--品牌找不到"
+                print e
                 self.pageTool.driver.back()
+                continue
+            self.getPageData(clsIter, dataBrand, shopName, xpathList, shopID)
+            self.pageTool.driver.back()
 
 
     def handSpider(self):
@@ -155,7 +164,7 @@ class ShopData:
                 clsAll.append(clse+clsa)
 
 
-        webList=['http://www.jd.com/','https://www.tmall.com/','https://www.amazon.cn/','http://www.suning.com/','https://www.taobao.com']
+        webList=['http://www.jd.com/','https://www.tmall.com/','http://www.suning.com/','https://www.taobao.com']
     
         xpathList=[
             [
@@ -183,17 +192,17 @@ class ShopData:
                 "//div[@class='product  ']/div/div[@class='productImg-wrap']/a/img",         #-src
                 "//div[@class='product  ']/div/p[@class='productTitle']/a",                 #天猫 衣服  name
             ],
-            [
-                "//input[@id='twotabsearchtextbox']",
-                "//div[@class='refinements']/ul[@id='ref_125596071']",
-                "//ul[@id='ref_125596071']/li",                                      #-text ###
-                "//ul[@id='s-results-list-atf']",                                   ###
-                "//a[@class='a-link-normal s-access-detail-page  a-text-normal']",   #-text
-                "//div[@class='a-row a-spacing-none']/span/a[@class='a-size-small a-link-normal a-text-normal']",   #-text ###
-                "//span[@class='a-size-base a-color-price s-price a-text-bold']",    #-text
-                "//div[@class='a-section a-spacing-none a-inline-block s-position-relative']/a",  #-href
-                "//div[@class='a-section a-spacing-none a-inline-block s-position-relative']/a/img" #src
-            ],
+            # [
+            #     "//input[@id='twotabsearchtextbox']",
+            #     "//div[@class='refinements']/ul[@id='ref_125596071']",
+            #     "//ul[@id='ref_125596071']/li",                                      #-text ###
+            #     "//ul[@id='s-results-list-atf']",                                   ###
+            #     "//a[@class='a-link-normal s-access-detail-page  a-text-normal']",   #-text
+            #     "//div[@class='a-row a-spacing-none']/span/a[@class='a-size-small a-link-normal a-text-normal']",   #-text ###
+            #     "//span[@class='a-size-base a-color-price s-price a-text-bold']",    #-text
+            #     "//div[@class='a-section a-spacing-none a-inline-block s-position-relative']/a",  #-href
+            #     "//div[@class='a-section a-spacing-none a-inline-block s-position-relative']/a/img" #src
+            # ],
             [
                 "//input[@id='searchKeywords']",
                 "//div[@class='brand-item brand-con']",
@@ -209,7 +218,7 @@ class ShopData:
             [
                 "//input[@id='q']",
                 "//div[@id='J_NavCommonRowItems_0']",
-                "//div[@id='J_NavCommonRowItems_0']/a",            #-text
+                "//div[@id='J_NavCommonRowItems_0']/a[@class='item icon-tag J_Ajax J_baikeiTrigger']",            #-text
                 "//div[@class='item J_MouserOnverReq  ']",
                 "//div[@class='item J_MouserOnverReq  ']/div[@class='ctx-box J_MouseEneterLeave J_IconMoreNew']/div[@class='row row-2 title']",  #-text
                 "//div[@class='item J_MouserOnverReq  ']/div[@class='ctx-box J_MouseEneterLeave J_IconMoreNew']/div[@class='row row-1 g-clearfix']/div[@class='deal-cnt']",     #-text
@@ -225,12 +234,14 @@ class ShopData:
             ],
         ]
 
-        shopName=[u"京东",u"天猫",u"亚马逊",u"苏宁易购",u"淘宝"]
+        shopName=[u"京东",u"天猫",u"苏宁易购",u"淘宝"]
 
-        shopnumber=4
-        self.getClsData(webList[shopnumber],clsAll,shopName[shopnumber],xpathList[shopnumber],shopnumber)
+        for clsIter in clsAll:
+            for shopnumber in range(4):
+                self.getClsData(webList[shopnumber],clsIter,shopName[shopnumber],xpathList[shopnumber],shopnumber)
 
-spider=ShopData()
-spider.handSpider()
+if __name__ == '__main__':
+    spider=ShopData()
+    spider.handSpider()
 
 
